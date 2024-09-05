@@ -5,10 +5,11 @@ int main() {
     FILE * in = fopen("test.img", "rb");
     unsigned int i, start_sector, length_sectors;
     
-    fseek(in, ... , SEEK_SET); // Voy al inicio. Completar donde dice ...
+    // Voy al inicio. Completamos el offset del primer byte de la primera partición, que es 0x1BE
+    fseek(in, 0x1BE , SEEK_SET); 
     
-    for(i=0; i<4; i++) { // Leo las entradas
-        printf("Partition entry %d: First byte %02X\n", i, fgetc(in));
+    for(i=1; i<2; i++) { // Leo las entradas
+        printf("Partition entry %d:\n  First byte %02X\n", i, fgetc(in));
         printf("  Comienzo de partición en CHS: %02X:%02X:%02X\n", fgetc(in), fgetc(in), fgetc(in));
         printf("  Partition type 0x%02X\n", fgetc(in));
         printf("  Fin de partición en CHS: %02X:%02X:%02X\n", fgetc(in), fgetc(in), fgetc(in));
