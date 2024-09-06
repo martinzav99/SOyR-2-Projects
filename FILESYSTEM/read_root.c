@@ -43,7 +43,7 @@ typedef struct {
 } __attribute((packed)) Fat12BootSector;
 
 typedef struct {
-    char filename[11];
+    unsigned char filename[11];
     unsigned char attribute;
     unsigned char reserved;
     unsigned char creation_time_tenths; // 0.1 seconds
@@ -63,20 +63,20 @@ void print_file_info(Fat12Entry *entry) {
     case UNUSED_ENTRY:
         return; 
     case DELETED_FILE: 
-        printf("Archivo borrado: [?%.7s.%.3s]\n", entry-> filename +1 , entry -> filename + 8);
-        //printf("Archivo borrado: [?%.11s]\n", entry->filename);
+        //printf("Archivo borrado: [?%.7s.%.3s]\n", entry-> filename +1 , entry -> filename + 8);
+        printf("Archivo borrado: ?%s\n", entry->filename);
         return;
     case FIRST_BYTE_0xE5: 
-        printf("Archivo que comienza con 0xE5: [%c%.7s.%.3s]\n", 0xE5, entry -> filename +1, entry -> filename +8);
-        //printf("Archivo que comienza con 0xE5: [%.11s]\n", entry -> filename);
+        //printf("Archivo que comienza con 0xE5: [%c%.7s.%.3s]\n", 0xE5, entry -> filename +1, entry -> filename +8);
+        printf("Archivo que comienza con 0xE5: %s\n", entry -> filename);
         break;
     case DOT_DIR: 
-        printf("Directorio: [%.8s.%.3s]\n", entry -> filename , entry -> filename+8);
-        //printf("Directorio: [%.11s]\n", entry -> filename);
+        //printf("Directorio: [%.8s.%.3s]\n", entry -> filename , entry -> filename+8);
+        printf("Directorio: %s\n", entry -> filename);
         break;
     default:
-        printf("Archivo: [%.8s.%.3s]\n", entry -> filename, entry -> filename+8);
-        //printf("Archivo: [%.11s]\n",entry -> filename);
+        //printf("Archivo: [%.8s.%.3s]\n", entry -> filename, entry -> filename+8);
+        printf("Archivo: %s\n",entry -> filename);
     }
 }
 
