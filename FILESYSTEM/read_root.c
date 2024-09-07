@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #define UNUSED_ENTRY 0x00
@@ -61,30 +62,82 @@ typedef struct {
     unsigned int file_size; // 0 for directories
 } __attribute((packed)) Fat12Entry;
 
+typedef struct {
+    unsigned char sequence_number;
+    unsigned char filename_a[10];
+    unsigned char attribute;
+    unsigned char reserved_a;
+    unsigned char checksum;
+    unsigned char filename_b[12];
+    unsigned short reserved_b;
+    unsigned char filename_c[4];
+} __attribute((packed)) Fat12LFNEntry;
 
-void print_file_info(Fat12Entry *entry, char *name) {
+
+void getName(char nameLFN[14], Fat12Entry *entry){
+
+    Fat12LFNEntry *entryLFN = (Fat12LFNEntry *) entry;
+    
+    nameLFN[0]=entryLFN->filename_a[0]; // 5 char UNICODE
+    nameLFN[1]=entryLFN->filename_a[2];
+    nameLFN[2]=entryLFN->filename_a[4];
+    nameLFN[3]=entryLFN->filename_a[6];
+    nameLFN[4]=entryLFN->filename_a[8];
+
+    nameLFN[5]=entryLFN->filename_b[0]; 
+    nameLFN[6]=entryLFN->filename_b[2];
+    nameLFN[7]=entryLFN->filename_b[4];
+    nameLFN[8]=entryLFN->filename_b[6];
+    nameLFN[9]=entryLFN->filename_b[8];
+    nameLFN[10]=entryLFN->filename_b[10];
+
+    nameLFN[11]=entryLFN->filename_c[0];
+    nameLFN[12]=entryLFN->filename_c[2];
+
+    nameLFN[13]='\0';
+    return;
+}
+
+
+void print_file_info(Fat12Entry *entry) {
+
+    bool deleted;
+    char full_name[256];  // max name length in FAT12,  255 char + 1 end of string
+    char buff[256];
+    char nameLFN[14];  
 
     switch(entry->filename[0]) {
-    case UNUSED_ENTRY:
-        return; 
-    case DELETED_FILE: 
-        //printf("Archivo borrado: [?%.7s.%.3s]\n", entry-> filename +1 , entry -> filename + 8);
-        printf("Archivo borrado: ?%s\n", name);
-        name[0] = '\0';
-        return;
-    case FIRST_BYTE_0xE5: 
-        //printf("Archivo que comienza con 0xE5: [%c%.7s.%.3s]\n", 0xE5, entry -> filename +1, entry -> filename +8);
-        printf("Archivo que comienza con 0xE5: %s\n", name);
-        name[0] = '\0';
-        break;
-    case DOT_DIR: 
-        //printf("Directorio: [%.8s.%.3s]\n", entry -> filename , entry -> filename+8);
-        //printf("Directorio '.' o '..': %s\n", entry -> filename);
-        break;
-    default:
-        //printf("Archivo: [%.8s.%.3s]\n", entry -> filename, entry -> filename+8);
-        printf("Archivo: %s\n",name);
-        name[0] = '\0';
+        case UNUSED_ENTRY:
+            return; 
+        case DELETED_FILE:
+            deleted = true;
+            break;
+        case FIRST_BYTE_0xE5: 
+            break;
+        case DOT_DIR: 
+            break;
+        default:
+            deleted = false;
+    }
+
+    switch(entry->attribute) {
+        case LONG_FILE_NAME:
+            strcpy(buff,full_name);
+            full_name[0] = '\0';
+            getName(nameLFN,entry);
+            strcat(full_name,nameLFN);
+            strcat(full_name,buff);     
+            break;
+
+        case DIRECTORY:
+            printf("%s%s\n", deleted ? "Directorio borrado: ?" : "Directorio: ", full_name);
+            full_name[0] = '\0';
+            break;
+
+        case ARCHIVE:
+            printf("%s%s\n", deleted ? "Archivo borrado: ?" : "Archivo: ", full_name);
+            full_name[0] = '\0';
+            break;
     }
 }
 
@@ -121,11 +174,10 @@ int main() {
            
     fseek(in, (bs.reserved_sectors-1 + bs.fat_size * bs.num_fats) * bs.sector_size, SEEK_CUR);
     
-    printf("Root dir_entries %d \n", bs.root_entries);
-    char name[256] = "";
+    printf("Root dir_entries %d \n\n", bs.root_entries);
     for(i=0; i<bs.root_entries; i++) {
         fread(&entry, sizeof(entry), 1, in);
-        print_file_info(&entry,name);
+        print_file_info(&entry);
     }
     
     printf("\nLeido Root directory, ahora en 0x%lX\n", ftell(in));
