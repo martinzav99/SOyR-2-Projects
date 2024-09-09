@@ -12,7 +12,6 @@
 #define DIRECTORY 0x10
 #define ARCHIVE 0x20
 
-
 typedef struct {
     unsigned char first_byte;
     unsigned char start_chs[3];
@@ -73,6 +72,7 @@ typedef struct {
     unsigned char filename_c[4];
 } __attribute((packed)) Fat12LFNEntry;
 
+void print_file_info(Fat12Entry *entry, FILE *f, Fat12BootSector bs);
 
 void getName(char nameLFN[14], Fat12Entry *entry){
 
@@ -115,7 +115,7 @@ void print_content(Fat12Entry *entry, FILE *f , Fat12BootSector bs){
     long int offset_content = sizeof(Fat12BootSector) 
                             + (bs.reserved_sectors-1 + bs.fat_size * bs.num_fats) * bs.sector_size
                             +  bs.root_entries*sizeof(Fat12Entry)
-                            + ((num_cluster)-2) * cluster_siz;
+                            + ((num_cluster)-2) * cluster_siz; // there are 2 reserved clusters 
 
     fseek(f, offset_content, SEEK_SET);          
     fread(file_content, entry->file_size, 1, f);
@@ -123,6 +123,38 @@ void print_content(Fat12Entry *entry, FILE *f , Fat12BootSector bs){
     
     printf("\n%s\n\n", file_content);
     fseek(f, file_index, SEEK_SET);
+}
+
+void print_inside_directory(Fat12Entry *entry, FILE *f , Fat12BootSector bs){
+    printf("----o----\n\n");
+
+    if(entry -> filename[0] == DELETED_FILE){
+        printf("\nSin contenido, intente recuperar el directorio.\n\n");
+        return;
+    }
+
+    Fat12Entry directory_entry;
+
+    unsigned long directory_index = ftell(f);  
+    int cluster_siz = bs.sector_size * bs.cluster_size;
+    int num_cluster = entry -> low_cluster_address;
+    unsigned short num_entries = cluster_siz / sizeof(Fat12Entry);
+
+
+    long int offset_content = sizeof(Fat12BootSector) 
+                            + (bs.reserved_sectors-1 + bs.fat_size * bs.num_fats) * bs.sector_size
+                            +  bs.root_entries*sizeof(Fat12Entry)
+                            + ((num_cluster)-2) * cluster_siz; // there are 2 reserved clusters 
+
+    fseek(f, offset_content , SEEK_SET);
+
+    for (int i = 0 ; i < num_entries; i++){
+        fread(&directory_entry, sizeof(directory_entry), 1, f);
+        print_file_info(&directory_entry, f , bs);
+    }
+
+    fseek(f, directory_index, SEEK_SET);
+    printf("\n----o----\n");
 }
 
 void print_file_info(Fat12Entry *entry, FILE *f , Fat12BootSector bs) {
@@ -141,7 +173,7 @@ void print_file_info(Fat12Entry *entry, FILE *f , Fat12BootSector bs) {
         case FIRST_BYTE_0xE5: 
             break;
         case DOT_DIR: 
-            break;
+            return;
         default:
             deleted = false;
     }
@@ -156,8 +188,9 @@ void print_file_info(Fat12Entry *entry, FILE *f , Fat12BootSector bs) {
             break;
 
         case DIRECTORY:
-            printf("%s%s\n\n", deleted ? "[!]Directorio borrado: ?" : "[-]Directorio: ", full_name);
+            printf("%s%s\n", deleted ? "[!]Directorio borrado: ?" : "[-]Directorio: ", full_name);
             full_name[0] = '\0';
+            print_inside_directory(entry, f, bs);
             break;
 
         case ARCHIVE:
