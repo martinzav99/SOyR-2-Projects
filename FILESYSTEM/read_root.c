@@ -99,7 +99,33 @@ void getName(char nameLFN[14], Fat12Entry *entry){
 }
 
 
-void print_file_info(Fat12Entry *entry) {
+void print_content(Fat12Entry *entry, FILE *f , Fat12BootSector bs){
+    
+    if(entry -> filename[0] == DELETED_FILE){
+        printf("\nSin contenido, intente recuperar el archivo.\n\n");
+        return;
+    }
+
+    unsigned long file_index = ftell(f);
+
+    int num_cluster = entry -> low_cluster_address;
+    int cluster_siz = bs.sector_size * bs.cluster_size;
+    char file_content[cluster_siz + 1]; // + 1 end of file
+    
+    long int offset_content = sizeof(Fat12BootSector) 
+                            + (bs.reserved_sectors-1 + bs.fat_size * bs.num_fats) * bs.sector_size
+                            +  bs.root_entries*sizeof(Fat12Entry)
+                            + ((num_cluster)-2) * cluster_siz;
+
+    fseek(f, offset_content, SEEK_SET);          
+    fread(file_content, entry->file_size, 1, f);
+    file_content[entry->file_size] = '\0';
+    
+    printf("\n%s\n\n", file_content);
+    fseek(f, file_index, SEEK_SET);
+}
+
+void print_file_info(Fat12Entry *entry, FILE *f , Fat12BootSector bs) {
 
     bool deleted;
     char full_name[256];  // max name length in FAT12,  255 char + 1 end of string
@@ -130,13 +156,14 @@ void print_file_info(Fat12Entry *entry) {
             break;
 
         case DIRECTORY:
-            printf("%s%s\n", deleted ? "Directorio borrado: ?" : "Directorio: ", full_name);
+            printf("%s%s\n\n", deleted ? "[!]Directorio borrado: ?" : "[-]Directorio: ", full_name);
             full_name[0] = '\0';
             break;
 
         case ARCHIVE:
-            printf("%s%s\n", deleted ? "Archivo borrado: ?" : "Archivo: ", full_name);
+            printf("%s%s\n", deleted ? "[!]Archivo borrado: ?" : "[*]Archivo: ", full_name);
             full_name[0] = '\0';
+            print_content(entry, f, bs);
             break;
     }
 }
@@ -168,7 +195,7 @@ int main() {
     
     fseek(in, 0, SEEK_SET);
     fread(&bs, sizeof(Fat12BootSector), 1, in);
-    
+
     printf("En  0x%lX, sector size %d, FAT size %d sectors, %d FATs\n\n", 
            ftell(in), bs.sector_size, bs.fat_size, bs.num_fats);
            
@@ -177,7 +204,7 @@ int main() {
     printf("Root dir_entries %d \n\n", bs.root_entries);
     for(i=0; i<bs.root_entries; i++) {
         fread(&entry, sizeof(entry), 1, in);
-        print_file_info(&entry);
+        print_file_info(&entry, in , bs);
     }
     
     printf("\nLeido Root directory, ahora en 0x%lX\n", ftell(in));
