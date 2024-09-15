@@ -72,6 +72,11 @@ typedef struct {
     unsigned char filename_c[4];
 } __attribute((packed)) Fat12LFNEntry;
 
+//Auxiliar structures for name entries
+char full_name[256] = "";  // max name length in FAT12,  255 char + 1 end of string. 
+char buff[256] = "";
+char nameLFN[14] = ""; 
+
 void print_file_info(Fat12Entry *entry, FILE *f, Fat12BootSector bs);
 
 void getName(char nameLFN[14], Fat12Entry *entry){
@@ -159,10 +164,7 @@ void print_inside_directory(Fat12Entry *entry, FILE *f , Fat12BootSector bs){
 
 void print_file_info(Fat12Entry *entry, FILE *f , Fat12BootSector bs) {
 
-    bool deleted;
-    char full_name[256];  // max name length in FAT12,  255 char + 1 end of string
-    char buff[256];
-    char nameLFN[14];  
+    bool deleted; 
 
     switch(entry->filename[0]) {
         case UNUSED_ENTRY:

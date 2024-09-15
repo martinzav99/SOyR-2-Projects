@@ -28,7 +28,7 @@ typedef struct {
     unsigned char jmp[3];
     char oem[8];
     unsigned short sector_size;
-	unsigned char cluster_size; // 1 byte
+    unsigned char cluster_size; // 1 byte
     unsigned short reserved_sectors; // 2 bytes
     unsigned char num_fats; // 1 byte
     unsigned short root_entries; // 2 bytes
@@ -74,6 +74,9 @@ typedef struct {
     unsigned short reserved_b;
     unsigned char filename_c[4];
 } __attribute((packed)) Fat12LFNEntry;
+
+bool file_found = false; // Variable para indicar si se encontró el archivo
+unsigned long begin_entry;
 
 void find_file(Fat12Entry *entry, FILE *f, Fat12BootSector bs, char *file_to_recover );
 
@@ -126,15 +129,22 @@ void find_inside_directory(Fat12Entry *entry, FILE *f , Fat12BootSector bs, char
 }
 
 void recover_file(FILE *f, char* word){
-    unsigned long pos = ftell(f); 
+    unsigned long pos = ftell(f);
+    fseek(f, begin_entry, SEEK_SET); 
     fwrite(word, 1, 1, f);
     fseek(f, pos, SEEK_SET);
 }
 
 void find_file(Fat12Entry *entry, FILE *f , Fat12BootSector bs, char *file_to_recover){
 
-    if(entry->filename[0] == DOT_DIR)
-        return;
+    switch(entry->filename[0]){
+        case DOT_DIR:
+            return;
+        case UNUSED_ENTRY:
+            return;
+        default:
+            break;
+    }
 
     char full_name[256];  // max name length in FAT12,  255 char + 1 end of string
     char buff[256];
@@ -143,11 +153,14 @@ void find_file(Fat12Entry *entry, FILE *f , Fat12BootSector bs, char *file_to_re
     switch(entry->attribute) {
         case LONG_FILE_NAME:
             strcpy(buff,full_name);
-            recover_file(f,RECOVER_VALUE_LFN);
             full_name[0] = '\0';
             getName(nameLFN,entry);
             strcat(full_name,nameLFN);
             strcat(full_name,buff);
+
+            if (entry->filename[0] == DELETED_FILE)
+                recover_file(f,RECOVER_VALUE_LFN);
+
             break;
 
         case DIRECTORY:
@@ -156,13 +169,13 @@ void find_file(Fat12Entry *entry, FILE *f , Fat12BootSector bs, char *file_to_re
             break;
 
         case ARCHIVE:
-            if (strstr(full_name,file_to_recover) == NULL){ // strstr allows to check if exist a substring
-                full_name[0] = '\0';
-                return;
-            }    
-            
-            recover_file(f,RECOVER_VALUE);
-            printf("\nEl archivo %s ha sido recuperado, prueba listar los archivos del filesystem!\n", full_name);
+
+            if (strstr(full_name,file_to_recover) != NULL && entry->filename[0] == DELETED_FILE){
+                recover_file(f,RECOVER_VALUE);
+                file_found = true;
+                printf("\nEl archivo %s ha sido recuperado, prueba listar los archivos del filesystem!\n", full_name);
+            }
+
             full_name[0] = '\0';
             break;
     }
@@ -209,11 +222,16 @@ int main() {
     
     printf("Root dir_entries %d \n\n", bs.root_entries);
     for(i=0; i<bs.root_entries; i++) {
+        begin_entry = ftell(in);
         fread(&entry, sizeof(entry), 1, in);
         find_file(&entry, in , bs, file_to_recover);        
     }
     
-    printf("\nLeido Root directory, ahora en 0x%lX\n", ftell(in));
-    fclose(in);
-    return 0;
+    if (!file_found) {
+        printf("No se encontró ningún archivo que coincida con el nombre ingresado.\n");
+    }
+
+    printf("\nLeído Root directory, ahora en 0x%lX\n", ftell(in));
+
+
 }
