@@ -9,19 +9,26 @@ int main()
 {
    char text[100], substring[100];
    int position;
- 
+   
    printf("Enter some text\n");
-   gets(text);
- 
+   fgets(text, sizeof(text), stdin);
+   //gets(text);
+
    printf("Enter the string to insert\n");
-   gets(substring);
+   fgets(substring, sizeof(substring), stdin);
+   //gets(substring); 
  
    printf("Enter the position to insert\n");
    scanf("%d", &position);
- 
+
+   if(position < 1 || position > strlen(text)){
+      fprintf(stderr, "Posicion Invalida. Ingresa un numero entre 1 y %ld.\n\n", strlen(text)); 
+      return 1;
+   }
+
    insert_substring(text, substring, position);
  
-   printf("%s\n",text);
+   printf("%s\n\n",text);
  
    return 0;
 }
