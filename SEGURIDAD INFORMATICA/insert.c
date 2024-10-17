@@ -12,10 +12,12 @@ int main()
    
    printf("Enter some text\n");
    fgets(text, sizeof(text), stdin);
+   text[strlen(text)-1] = '\0';
    //gets(text);
 
    printf("Enter the string to insert\n");
    fgets(substring, sizeof(substring), stdin);
+   substring[strlen(substring)-1] = '\0';
    //gets(substring); 
  
    printf("Enter the position to insert\n");
