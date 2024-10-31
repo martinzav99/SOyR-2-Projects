@@ -1,5 +1,7 @@
 127.0.0.1	localhost
-127.0.1.1	marce-VM
+127.0.1.1	marce-VM #ignorar el host marce-VM, en sus maquinas tienen el suyo
+
+# estas dos lineas de abajo son las que hay que agregar 
 127.0.0.1 empresa1.com www.empresa1.com
 127.0.0.1 empresa2.com www.empresa2.com
 
