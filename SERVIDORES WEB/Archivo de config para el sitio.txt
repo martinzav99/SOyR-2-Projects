@@ -3,8 +3,14 @@
     DocumentRoot /var/www/html
 
     SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/alice_cert.pem
-    SSLCertificateKeyFile /etc/ssl/private/alice.pem
+    SSLCertificateFile /etc/ssl/certs/selfsigned.crt
+    SSLCertificateKeyFile /etc/ssl/private/selfsigned.key
+
+    SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+    SSLCipherSuite HIGH:!aNULL:!MD5
+
+    # Habilitar HSTS
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
     <Directory /var/www/html>
         Options Indexes FollowSymLinks
